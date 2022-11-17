@@ -103,9 +103,7 @@ export function CheckoutScreen({navigation, route} : any) {
     const [paymentIntentId, setPaymentIntentId] = useState<string>("");
 
     const fetchPaymentSheetParams = async () => {
-        if(amount == -1) {
-            amount = itemsId.reduce((acc, item) => acc + item.price, 0);
-        }
+        amount = itemsId.reduce((acc, item) => acc + item.price, 0);
         const response = await fetch(`http://${ipAddress}:8000/payments/`, {
             method: 'POST',
             headers: {
