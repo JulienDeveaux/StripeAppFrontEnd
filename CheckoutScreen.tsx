@@ -1,6 +1,6 @@
 import { useStripe } from "@stripe/stripe-react-native";
 import React, { useEffect, useState } from "react";
-import {Alert, Text, Button, SafeAreaView, StyleSheet, TextInput, FlatList} from "react-native";
+import {Alert, Text, Button, SafeAreaView, StyleSheet, TextInput, FlatList, Pressable} from "react-native";
 import {NavigationContainer} from "@react-navigation/native";
 import {createNativeStackNavigator} from "@react-navigation/native-stack";
 
@@ -8,7 +8,8 @@ const Stack = createNativeStackNavigator();
 
 type Item = {
     id: number,
-    price: number
+    price: number,
+    amount: number
 }
 
 let amount = -1;
@@ -17,39 +18,16 @@ let itemsId: Item[] = [];
 
 const ipAddress = "192.168.1.73"
 
-export function PanierScreen({navigation, route} : any) {
+export function AddScreen({navigation, route} : any) {
     const[localItemsId, setItemsId] = useState(itemsId);
+
+    let itemId : string = "-1";
 
     let params = route.params
     if (params && params.itemsId) {
         itemsId = Array.from(params.itemsId)
         params.itemsId = undefined
     }
-
-    function flushPanier() {
-        itemsId = []
-        setItemsId(itemsId)
-    }
-
-    return (
-        <SafeAreaView style={styles.container}>
-            <Text style={styles.title}>Panier</Text>
-            <FlatList data={itemsId}
-                      renderItem={({item}) =>
-                <Text style={styles.flatListText}>item N° {item.id}, prix : {item.price}</Text>
-            }/>
-            <Text style={styles.title}>Total</Text>
-            <Text>{itemsId.reduce((acc, item) => acc + item.price, 0)} euros</Text>
-            <Button title="Vider le panier" onPress={flushPanier}/>
-            <Button title="Vers l'ajout d'item" onPress={() => navigation.navigate('Ajout d\'item', {itemsId: itemsId})}/>
-            <Button title="Vers le paiement" onPress={() => navigation.navigate('Paiement', {itemsId: itemsId})}/>
-        </SafeAreaView>
-    );
-}
-
-export function AddScreen({navigation, route} : any) {
-    const[localItemsId, setItemsId] = useState(itemsId);
-    let itemId : string = "-1";
 
     const setTitle = (id : string) => {
         itemId = id;
@@ -69,13 +47,23 @@ export function AddScreen({navigation, route} : any) {
         const response = await fetch('http:/' + ipAddress + ':8000/items/' + id)
         if (response.status == 200) {
             const item = await response.json();
-            itemsId.push({id: id, price: item.price})
-            setItemsId(itemsId);
-            Alert.alert('Success', 'Item added to cart ' + item.name + " " + item.price + " amount : " + itemsId.reduce((acc, item) => acc + item.price, 0));
+            const index = itemsId.findIndex((item) => item.id == id);
+            if (index == -1) {
+                itemsId.push({id: id, price: item.price, amount: 1});
+            } else {
+                itemsId[index].amount++;
+            }
+            setItemsId([...itemsId]);
         } else {
             Alert.alert('Error', 'Item not found or backend offline');
         }
     }
+
+    function flushPanier() {
+        itemsId = []
+        setItemsId([...itemsId])
+    }
+
     return (
         <SafeAreaView style={styles.container}>
             <TextInput style={styles.input}
@@ -87,9 +75,16 @@ export function AddScreen({navigation, route} : any) {
                 title="Add to cart"
                 onPress={addItemToCart}
             />
-            <Button title="Vers le panier" onPress={
-                () => navigation.navigate('Panier', {itemsId: itemsId})
-            }/>
+            <Text style={styles.title}>Panier</Text>
+            <FlatList data={itemsId}
+                      renderItem={({item}) =>
+                          <Text style={styles.flatListText}>item N° {item.id}, prix : {item.price}, quantité : {item.amount}</Text>
+                      }/>
+            <Pressable style={{...styles.button, ...styles.redColor}}
+                       onPress={() => flushPanier()}>
+                <Text>Vider le panier</Text>
+            </Pressable>
+            <Text>{itemsId.reduce((acc, item) => acc + item.price * item.amount, 0)} euros</Text>
             <Button title="Vers le paiement" onPress={
                 () => navigation.navigate('Paiement', {itemsId: itemsId})
             }/>
@@ -179,7 +174,6 @@ export function CheckoutScreen({navigation, route} : any) {
                 title="Checkout"
                 onPress={openPaymentSheet}
             />
-            <Button title="Vers le panier" onPress={() => navigation.navigate('Panier')}/>
             <Button title="Vers l'ajout d'item" onPress={() => navigation.navigate('Ajout d\'item')}/>
         </SafeAreaView>
     );
@@ -191,7 +185,6 @@ export default function routes() {
             <Stack.Navigator>
                 <Stack.Screen name="Ajout d'item" component={AddScreen} />
                 <Stack.Screen name="Paiement" component={CheckoutScreen}></Stack.Screen>
-                <Stack.Screen name="Panier" component={PanierScreen}></Stack.Screen>
             </Stack.Navigator>
         </NavigationContainer>
     );
