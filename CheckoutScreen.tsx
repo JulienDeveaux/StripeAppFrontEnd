@@ -1,6 +1,6 @@
 import { useStripe } from "@stripe/stripe-react-native";
 import React, { useEffect, useState } from "react";
-import {Alert, Text, Button, SafeAreaView, StyleSheet, TextInput, FlatList, Pressable} from "react-native";
+import {Alert, Text, Button, SafeAreaView, StyleSheet, TextInput, FlatList, Pressable, View} from "react-native";
 import {NavigationContainer} from "@react-navigation/native";
 import {createNativeStackNavigator} from "@react-navigation/native-stack";
 
@@ -8,6 +8,7 @@ const Stack = createNativeStackNavigator();
 
 type Item = {
     id: number,
+    name: string,
     price: number,
     amount: number
 }
@@ -20,8 +21,7 @@ const ipAddress = "192.168.1.73"
 
 export function AddScreen({navigation, route} : any) {
     const[localItemsId, setItemsId] = useState(itemsId);
-
-    let itemId : string = "-1";
+    const[localInput, setInput] = useState("1");
 
     let params = route.params
     if (params && params.itemsId) {
@@ -30,13 +30,13 @@ export function AddScreen({navigation, route} : any) {
     }
 
     const setTitle = (id : string) => {
-        itemId = id;
+        setInput(id);
     }
 
     const addItemToCart = async () => {
         let id : number;
         try {
-            id = parseInt(itemId);
+            id = parseInt(localInput);
             if(id == -1) {
                 throw new Error("")
             }
@@ -49,7 +49,7 @@ export function AddScreen({navigation, route} : any) {
             const item = await response.json();
             const index = itemsId.findIndex((item) => item.id == id);
             if (index == -1) {
-                itemsId.push({id: id, price: item.price, amount: 1});
+                itemsId.push({id: id, name: item.name, price: item.price, amount: 1});
             } else {
                 itemsId[index].amount++;
             }
@@ -64,12 +64,33 @@ export function AddScreen({navigation, route} : any) {
         setItemsId([...itemsId])
     }
 
+    function removeButton(id: number) {
+        const index = itemsId.findIndex((thisItem) => thisItem.id == id);
+        if (index > -1) {
+            if(itemsId[index].amount > 1) {
+                itemsId[index].amount--;
+            } else {
+                itemsId.splice(index, 1);
+            }
+        }
+        setItemsId([...itemsId]);
+    }
+
+    function addButton(id: number) {
+        const index = itemsId.findIndex((thisItem) => thisItem.id == id);
+        if (index > -1) {
+            itemsId[index].amount++;
+        }
+        setItemsId([...itemsId]);
+    }
+
     return (
         <SafeAreaView style={styles.container}>
             <TextInput style={styles.input}
                        onChangeText={(id) => setTitle(id)}
                        placeholder="Article number here"
                        keyboardType="numeric"
+                       value={localInput}
             />
             <Button
                 title="Add to cart"
@@ -78,16 +99,27 @@ export function AddScreen({navigation, route} : any) {
             <Text style={styles.title}>Panier</Text>
             <FlatList data={itemsId}
                       renderItem={({item}) =>
-                          <Text style={styles.flatListText}>item N° {item.id}, prix : {item.price}, quantité : {item.amount}</Text>
+                          <View style={styles.viewCrud}>
+                              <Text style={styles.flatListTextCrud}>{item.name}, prix : {item.price}, quantité : {item.amount} prix total : {item.price * item.amount}</Text>
+                              <Pressable style={{...styles.redColor, ...styles.crudButton}}
+                                         onPress={() => {removeButton(item.id)}}>
+                                    <Text>-</Text>
+                              </Pressable>
+                              <Pressable style={{...styles.greenColor, ...styles.crudButton}}
+                                         onPress={() => {addButton(item.id)}}>
+                                    <Text>+</Text>
+                              </Pressable>
+                          </View>
                       }/>
             <Pressable style={{...styles.button, ...styles.redColor}}
                        onPress={() => flushPanier()}>
                 <Text>Vider le panier</Text>
             </Pressable>
-            <Text>{itemsId.reduce((acc, item) => acc + item.price * item.amount, 0)} euros</Text>
-            <Button title="Vers le paiement" onPress={
-                () => navigation.navigate('Paiement', {itemsId: itemsId})
-            }/>
+            <Text>Prix total : {itemsId.reduce((acc, item) => acc + item.price * item.amount, 0)} euros</Text>
+            <Pressable style={{...styles.button, ...styles.greenColor}}
+                       onPress={() => navigation.navigate('Paiement', {itemsId: itemsId})}>
+                <Text>Vers le paiement</Text>
+            </Pressable>
         </SafeAreaView>
     );
 }
@@ -194,6 +226,10 @@ const styles = StyleSheet.create({
     container: {
         alignItems: 'center',
     },
+    viewCrud: {
+        flexDirection: 'row',
+        width: "80%"
+    },
     title: {
         fontSize: 30,
     },
@@ -205,6 +241,17 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         elevation: 3,
         width: 200
+    },
+    crudButton: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 12,
+        borderRadius: 4,
+        elevation: 3,
+        width: 10
+    },
+    flatListTextCrud: {
+        textAlign: 'center'
     },
     flatListText: {
         textAlign: 'center',
@@ -224,6 +271,6 @@ const styles = StyleSheet.create({
         backgroundColor: "#ff494c"
     },
     greenColor: {
-        backgroundColor: "#00ff00"
+        backgroundColor: "#1ad51a"
     }
 });
