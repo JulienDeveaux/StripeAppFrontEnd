@@ -4,6 +4,19 @@ import {Alert, Button, FlatList, Pressable, SafeAreaView, Text, TextInput, View}
 import {styles} from "./styles";
 import { ipAddress } from "./conf";
 import { Item } from "./conf";
+import * as SecureStore from 'expo-secure-store';
+
+async function save(key : any, value : any) {
+    await SecureStore.setItemAsync(key, value);
+}
+
+async function getValue(key : any) {
+    return await SecureStore.getItemAsync(key);
+}
+
+async function deleteValue(key : any) {
+    await SecureStore.deleteItemAsync(key);
+}
 
 export function AddScreen({navigation, route} : any) {
     const [localItemsId, setItemsId] = useState<Item[]>([]);
@@ -21,11 +34,23 @@ export function AddScreen({navigation, route} : any) {
     }
 
     useEffect(() => {
+        const getItemsFromSecureStorage = async () => {
+            let items = localItemsId;
+            const keys = await getValue("items");
+            if (keys) {
+                let storedItems : Item[] = JSON.parse(keys);
+                for(let i = 0; i < storedItems.length; i++) {
+                    items.push(storedItems[i])
+                }
+            }
+            setItemsId([...items])
+        };
         const getBarCodeScannerPermissions = async () => {
             const { status } = await BarCodeScanner.requestPermissionsAsync();
             setHasPermission(status === 'granted');
         };
 
+        getItemsFromSecureStorage();
         getBarCodeScannerPermissions();
     }, []);
 
@@ -71,6 +96,7 @@ export function AddScreen({navigation, route} : any) {
                     localItemsId[index].amount++;
                 }
                 setItemsId([...localItemsId]);
+                save("items", JSON.stringify(localItemsId));
             }
         } else {
             Alert.alert('Error', 'Item not found or backend offline');
@@ -79,6 +105,7 @@ export function AddScreen({navigation, route} : any) {
 
     function flushPanier() {
         setItemsId([])
+        deleteValue("items")
     }
 
     function removeButton(id: number) {
@@ -91,6 +118,7 @@ export function AddScreen({navigation, route} : any) {
             }
         }
         setItemsId([...localItemsId]);
+        save("items", JSON.stringify(localItemsId));
     }
 
     function addButton(id: number) {
@@ -99,6 +127,7 @@ export function AddScreen({navigation, route} : any) {
             localItemsId[index].amount++;
         }
         setItemsId([...localItemsId]);
+        save("items", JSON.stringify(localItemsId));
     }
 
     return (
