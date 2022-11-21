@@ -130,7 +130,7 @@ export function CheckoutScreen({navigation, route} : any) {
     const [paymentIntentId, setPaymentIntentId] = useState<string>("");
 
     const fetchPaymentSheetParams = async () => {
-        amount = itemsId.reduce((acc, item) => acc + item.price, 0);
+        amount = itemsId.reduce((acc, item) => acc + (item.price) * item.amount, 0);
         const response = await fetch(`http://${ipAddress}:8000/payments/`, {
             method: 'POST',
             headers: {
@@ -194,7 +194,11 @@ export function CheckoutScreen({navigation, route} : any) {
                 })
             });
 
-            if (response.status == 200) Alert.alert('Success', 'Your order is confirmed!');
+            if (response.status == 200) {
+                Alert.alert('Success', 'Your order is confirmed!');
+            } else {
+                Alert.alert('Error', 'There was an issue during the payment, please try later');
+            }
         }
     };
 
