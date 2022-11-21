@@ -3,6 +3,7 @@ import React, {useEffect, useState} from "react";
 import {ipAddress, Item, userId} from "./conf";
 import {Alert, Button, SafeAreaView, Text} from "react-native";
 import {styles} from "./styles";
+import * as SecureStore from "expo-secure-store";
 
 export function CheckoutScreen({navigation, route} : any) {
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
@@ -88,6 +89,7 @@ export function CheckoutScreen({navigation, route} : any) {
 
             if (response.status == 200) {
                 Alert.alert('Success', 'Your order is confirmed!');
+                await SecureStore.deleteItemAsync("items");
             } else {
                 Alert.alert('Error', 'There was an issue during the payment, please try later');
             }
