@@ -18,7 +18,53 @@ let amount = -1;
 let userId = 1;
 let itemsId: Item[] = [];
 
-const ipAddress = "192.168.1.73"
+const ipAddress = "192.168.25.36"
+
+export function BoughtScreen({navigation, route} : any) {
+    const[localItemsList, setItemsList] = useState([]);
+
+    const getBoughtItems = async () => {
+        const response = await fetch(`http://${ipAddress}:8000/payments/${userId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        if(response.status == 200) {
+            const json = await response.json()
+            let res : any[] = []
+            for(let i = 0; i < json.length; i++) {
+                for(let j = 0; j < json[i].purchased_items.length; j++) {
+                    const index = res.findIndex((item) => item.name == json[i].purchased_items[j].item.name);
+                    if(index == -1) {
+                        res.push({
+                            name: json[i].purchased_items[j].item.name,
+                            price: json[i].purchased_items[j].item.price,
+                            amount: 1
+                        })
+                    } else {
+                        res[index].amount++
+                    }
+                }
+            }
+            setItemsList(res)
+        }
+    }
+
+    useEffect(() => {
+        getBoughtItems();
+    }, []);
+
+    return (
+        <SafeAreaView style={styles.container}>
+            <Text style={styles.title}>Liste des achats</Text>
+            <FlatList data={localItemsList} renderItem={({item}) =>
+                <Text>{item.name}, prix : {item.price}, quantité : {item.amount}</Text>
+            }/>
+            <Button title="Vers l'ajout d'item" onPress={() => navigation.navigate('Ajout d\'item')}/>
+        </SafeAreaView>
+    );
+}
 
 export function AddScreen({navigation, route} : any) {
     const[localItemsId, setItemsId] = useState(itemsId);
@@ -155,6 +201,7 @@ export function AddScreen({navigation, route} : any) {
                        onPress={() => navigation.navigate('Paiement', {itemsId: itemsId})}>
                 <Text>Vers le paiement</Text>
             </Pressable>
+            <Button title="Vers la liste des achats" onPress={() => navigation.navigate('Liste des achats')}/>
         </SafeAreaView>
     );
 }
@@ -252,6 +299,7 @@ export function CheckoutScreen({navigation, route} : any) {
                 onPress={openPaymentSheet}
             />
             <Button title="Vers l'ajout d'item" onPress={() => navigation.navigate('Ajout d\'item')}/>
+            <Button title="Vers la liste des achats" onPress={() => navigation.navigate('Liste des achats')}/>
         </SafeAreaView>
     );
 }
@@ -262,6 +310,7 @@ export default function routes() {
             <Stack.Navigator>
                 <Stack.Screen name="Ajout d'item" component={AddScreen} />
                 <Stack.Screen name="Paiement" component={CheckoutScreen}></Stack.Screen>
+                <Stack.Screen name="Liste des achats" component={BoughtScreen}></Stack.Screen>
             </Stack.Navigator>
         </NavigationContainer>
     );
