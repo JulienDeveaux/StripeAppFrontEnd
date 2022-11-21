@@ -135,7 +135,7 @@ export function AddScreen({navigation, route} : any) {
             <FlatList data={itemsId}
                       renderItem={({item}) =>
                           <View style={styles.viewCrud}>
-                              <Text style={styles.flatListTextCrud}>{item.name}, prix : {item.price}, quantité : {item.amount} prix total : {item.price * item.amount}</Text>
+                              <Text style={styles.flatListTextCrud}>{item.name}, qté : {item.amount}, {item.price * item.amount} €</Text>
                               <Pressable style={{...styles.redColor, ...styles.crudButton}}
                                          onPress={() => {removeButton(item.id)}}>
                                     <Text>-</Text>
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     },
     viewCrud: {
         flexDirection: 'row',
-        width: "80%"
+        width: "90%"
     },
     title: {
         fontSize: 30,
@@ -290,13 +290,13 @@ const styles = StyleSheet.create({
     crudButton: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 12,
         borderRadius: 4,
         elevation: 3,
         width: 10
     },
     flatListTextCrud: {
-        textAlign: 'center'
+        textAlign: 'center',
+        flexDirection: 'row',
     },
     flatListText: {
         textAlign: 'center',
