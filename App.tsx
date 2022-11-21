@@ -1,5 +1,5 @@
 import { StripeProvider } from '@stripe/stripe-react-native';
-import CheckoutScreen from './CheckoutScreen';
+import CheckoutScreen from './views/Routes';
 
 export default function App() {
   return (
