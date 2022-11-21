@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import {Alert, Text, Button, SafeAreaView, StyleSheet, TextInput, FlatList, Pressable, View} from "react-native";
 import {NavigationContainer} from "@react-navigation/native";
 import {createNativeStackNavigator} from "@react-navigation/native-stack";
+import { BarCodeScanner } from 'expo-barcode-scanner';
 
 const Stack = createNativeStackNavigator();
 
@@ -22,6 +23,31 @@ const ipAddress = "192.168.1.73"
 export function AddScreen({navigation, route} : any) {
     const[localItemsId, setItemsId] = useState(itemsId);
     const[localInput, setInput] = useState("1");
+    const [hasPermission, setHasPermission] = useState(null);
+    const [scanned, setScanned] = useState(false);
+
+    useEffect(() => {
+        const getBarCodeScannerPermissions = async () => {
+            const { status } = await BarCodeScanner.requestPermissionsAsync();
+            setHasPermission(status === 'granted');
+        };
+
+        getBarCodeScannerPermissions();
+    }, []);
+
+    const handleBarCodeScanned = ({ type, data }) => {
+        setScanned(true);
+        console.log(`Bar code with type ${type} and data ${data} has been scanned!`);
+        setInput(data)
+        addItemToCart()
+    };
+
+    if (hasPermission === null) {
+        return <Text>Requesting for camera permission</Text>;
+    }
+    if (hasPermission === false) {
+        return <Text>No access to camera</Text>;
+    }
 
     let params = route.params
     if (params && params.itemsId) {
@@ -46,14 +72,18 @@ export function AddScreen({navigation, route} : any) {
         }
         const response = await fetch('http:/' + ipAddress + ':8000/items/' + id)
         if (response.status == 200) {
-            const item = await response.json();
-            const index = itemsId.findIndex((item) => item.id == id);
-            if (index == -1) {
-                itemsId.push({id: id, name: item.name, price: item.price, amount: 1});
+            const item = await response.json()
+            if(item == null) {
+                Alert.alert("Item not found with id : " + id)
             } else {
-                itemsId[index].amount++;
+                const index = itemsId.findIndex((item) => item.id == id);
+                if (index == -1) {
+                    itemsId.push({id: id, name: item.name, price: item.price, amount: 1});
+                } else {
+                    itemsId[index].amount++;
+                }
+                setItemsId([...itemsId]);
             }
-            setItemsId([...itemsId]);
         } else {
             Alert.alert('Error', 'Item not found or backend offline');
         }
@@ -86,6 +116,11 @@ export function AddScreen({navigation, route} : any) {
 
     return (
         <SafeAreaView style={styles.container}>
+            <BarCodeScanner
+                onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+                style={styles.qrScanner}
+            />
+            <Button title={'Tap to Scan Again'} onPress={() => setScanned(false)} />
             <TextInput style={styles.input}
                        onChangeText={(id) => setTitle(id)}
                        placeholder="Article number here"
@@ -181,7 +216,9 @@ export function CheckoutScreen({navigation, route} : any) {
             const paymentIntent = `pi_${paymentIntentId.split("_")[1]}`;
             let itemsIdOnly : number[] = []
             for(let i = 0; i < itemsId.length; i++) {
-                itemsIdOnly.push(parseInt(String(itemsId[i].id)))
+                for(let j = 0; j < itemsId[i].amount; j++) {
+                    itemsIdOnly.push(parseInt(String(itemsId[i].id)))
+                }
             }
             const response = await fetch(`http://${ipAddress}:8000/payments/check/${paymentIntent}`, {
                 method: 'POST',
@@ -265,6 +302,10 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         borderWidth: 1,
         width: 200
+    },
+    qrScanner: {
+        width: "50%",
+        height: "50%"
     },
     input: {
         width: 200,
