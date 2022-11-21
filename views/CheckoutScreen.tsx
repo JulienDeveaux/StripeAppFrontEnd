@@ -1,18 +1,27 @@
-import { useStripe } from "@stripe/stripe-react-native";
-import React, { useEffect, useState } from "react";
-import { Alert, Text, Button, SafeAreaView, StyleSheet, View } from "react-native";
+import {useStripe} from "@stripe/stripe-react-native";
+import React, {useEffect, useState} from "react";
+import {ipAddress, Item, userId} from "./conf";
+import {Alert, Button, SafeAreaView, Text} from "react-native";
+import {styles} from "./styles";
 
-export default function CheckoutScreen() {
+export function CheckoutScreen({navigation, route} : any) {
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
     const [loading, setLoading] = useState(false);
     const [paymentIntentId, setPaymentIntentId] = useState<string>("");
+    const [localItemsId, setItemsId] = useState<Item[]>([]);
 
-    const amount = 1099;
-    const userId = 1;
-    const itemsId = [1];
+    let itemsId : Item[] = [];
+    let params = route.params
+
+    if (params && params.itemsId) {
+        itemsId = Array.from(params.itemsId)
+        setItemsId([...itemsId])
+        params.itemsId = undefined
+    }
 
     const fetchPaymentSheetParams = async () => {
-        const response = await fetch(`http://192.168.25.196:8000/payments/`, {
+        let amount = localItemsId.reduce((acc, item) => acc + (item.price) * item.amount, 0);
+        const response = await fetch(`http://${ipAddress}:8000/payments/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -60,18 +69,28 @@ export default function CheckoutScreen() {
             Alert.alert(`Error code: ${error.code}`, error.message);
         } else {
             const paymentIntent = `pi_${paymentIntentId.split("_")[1]}`;
-            const response = await fetch(`http:/192.168.25.196:8000/payments/check/${paymentIntent}`, {
+            let itemsIdOnly : number[] = []
+            for(let i = 0; i < localItemsId.length; i++) {
+                for(let j = 0; j < localItemsId[i].amount; j++) {
+                    itemsIdOnly.push(parseInt(String(localItemsId[i].id)))
+                }
+            }
+            const response = await fetch(`http://${ipAddress}:8000/payments/check/${paymentIntent}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    "items_id": itemsId,
+                    "items_id": itemsIdOnly,
                     "customer_id": userId
                 })
             });
 
-            if (response.status == 200) Alert.alert('Success', 'Your order is confirmed!');
+            if (response.status == 200) {
+                Alert.alert('Success', 'Your order is confirmed!');
+            } else {
+                Alert.alert('Error', 'There was an issue during the payment, please try later');
+            }
         }
     };
 
@@ -81,50 +100,14 @@ export default function CheckoutScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <Text>Payment</Text>
+            <Text style={styles.title}>Payment</Text>
             <Button
                 disabled={!loading}
                 title="Checkout"
                 onPress={openPaymentSheet}
             />
+            <Button title="Vers l'ajout d'item" onPress={() => navigation.navigate('Ajout d\'item', {itemsId: localItemsId})}/>
+            <Button title="Vers la liste des achats" onPress={() => navigation.navigate('Liste des achats')}/>
         </SafeAreaView>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        alignItems: 'center',
-    },
-    title: {
-        fontSize: 30,
-    },
-    button: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 32,
-        borderRadius: 4,
-        elevation: 3,
-        width: 200
-    },
-    flatListText: {
-        textAlign: 'center',
-        borderWidth: 1,
-        width: 200
-    },
-    input: {
-        width: 200,
-        borderWidth: 1,
-        padding: 0,
-        textAlign: 'center'
-    },
-    blueColor: {
-        backgroundColor: "#0aebfe"
-    },
-    redColor: {
-        backgroundColor: "#ff494c"
-    },
-    greenColor: {
-        backgroundColor: "#00ff00"
-    }
-});
