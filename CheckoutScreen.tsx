@@ -179,13 +179,17 @@ export function CheckoutScreen({navigation, route} : any) {
             Alert.alert(`Error code: ${error.code}`, error.message);
         } else {
             const paymentIntent = `pi_${paymentIntentId.split("_")[1]}`;
+            let itemsIdOnly : number[] = []
+            for(let i = 0; i < itemsId.length; i++) {
+                itemsIdOnly.push(parseInt(String(itemsId[i].id)))
+            }
             const response = await fetch(`http://${ipAddress}:8000/payments/check/${paymentIntent}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    "items_id": itemsId,
+                    "items_id": itemsIdOnly,
                     "customer_id": userId
                 })
             });
